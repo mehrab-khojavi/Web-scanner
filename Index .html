@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>تست عکس و ارسال به تلگرام</title>
+</head>
+<body>
+  <h1>ارسال عکس به تلگرام</h1>
+  <button onclick="takePhotoAndSend()">گرفتن عکس</button>
+
+  <script>
+    async function takePhotoAndSend() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.createElement('video');
+        document.body.appendChild(video);
+        video.srcObject = stream;
+
+        await new Promise(resolve => {
+          video.onloadedmetadata = () => {
+            video.play();
+            resolve();
+          };
+        });
+
+        // صبر کوتاه تا تصویر آماده شود
+        await new Promise(r => setTimeout(r, 1000));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(blob => {
+          if (blob) {
+            sendPhotoToTelegram(blob);
+          } else {
+            console.error('عکس گرفته نشد یا canvas خالی بود');
+          }
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(video);
+        }, 'image/jpeg');
+      } catch (err) {
+        console.error('خطا در گرفتن دوربین:', err);
+      }
+    }
+
+    function sendPhotoToTelegram(blob) {
+      const token = '7731026303:AAHM_IKBur7e5E9gTKl3T7s5XQ1GEYdZ7wU';
+      const chat_id = '7103005496';
+      const url = `https://api.telegram.org/bot${token}/sendPhoto`;
+
+      const formData = new FormData();
+      formData.append('chat_id', chat_id);
+      formData.append('photo', blob, 'photo.jpg');
+
+      fetch(url, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('پاسخ تلگرام:', data);
+        if (!data.ok) alert('ارسال عکس موفق نبود 😔');
+        else alert('عکس با موفقیت ارسال شد! 📷✅');
+      })
+      .catch(error => {
+        console.error('خطا در ارسال عکس:', error);
+      });
+    }
+  </script>
+</body>
+</html>
